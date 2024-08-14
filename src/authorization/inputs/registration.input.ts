@@ -1,5 +1,6 @@
 import {Field, InputType} from "@nestjs/graphql";
-import {IsEmail, IsNotEmpty, IsString, Length} from "class-validator";
+import {IsEmail, IsEnum, IsNotEmpty, IsString, Length} from "class-validator";
+import {RoleEnum} from "../../utils/role.enum";
 
 @InputType()
 export class RegistrationInput {
@@ -30,5 +31,16 @@ export class RegistrationInput {
     @Length(8, 125)
     @Field()
     readonly password: string;
+    
+    @IsNotEmpty()
+    @IsString()
+    @Length(6, 125)
+    @Field()
+    readonly age: number;
+    
+    @IsNotEmpty()
+    @IsEnum(RoleEnum)
+    @Field()
+    readonly role: RoleEnum;
     
 }
