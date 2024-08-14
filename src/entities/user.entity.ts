@@ -1,5 +1,6 @@
 import {Column, Entity, PrimaryGeneratedColumn} from "typeorm";
 import {Field, ID, ObjectType} from "@nestjs/graphql";
+import {RoleEnum} from "../utils/role.enum";
 
 @ObjectType()
 @Entity()
@@ -32,5 +33,9 @@ export class User {
     @Field()
     @Column({ type: "integer" })
     age: number;
+    
+    @Field()
+    @Column({ type: "enum", enum: RoleEnum, default: RoleEnum.STUDENT })
+    role: RoleEnum;
     
 }
