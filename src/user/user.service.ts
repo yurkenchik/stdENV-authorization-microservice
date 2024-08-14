@@ -3,7 +3,6 @@ import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 import {CreateUserInput} from "./inputs/create-user.input";
 import {GraphQLException} from "@nestjs/graphql/dist/exceptions";
-import {Source} from "graphql/language";
 import {User} from "../entities/user.entity";
 
 @Injectable()

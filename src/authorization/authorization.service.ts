@@ -1,4 +1,4 @@
-import {Injectable} from "@nestjs/common";
+import {BadRequestException, HttpException, Injectable, InternalServerErrorException} from "@nestjs/common";
 import {RegistrationInput} from "./inputs/registration.input";
 import {GraphQLException} from "@nestjs/graphql/dist/exceptions";
 import {UserService} from "../user/user.service";
@@ -19,7 +19,7 @@ export class AuthorizationService {
     {
         try {
             const user = await this.userService.getUserByEmail(registrationInput.email);
-            if (user) throw new GraphQLException("User already exists", null);
+            if (user) throw new BadRequestException("User already exists", null);
             
             const hashedPassword = await bcrypt.hash(user.password, 5);
             const createdUser = await this.userService.createUser({
@@ -30,10 +30,10 @@ export class AuthorizationService {
             const generatedToken = await this.tokenService.generateToken(createdUser);
             return { user: createdUser, token: generatedToken };
         } catch (error) {
-            if (error instanceof GraphQLException) {
+            if (error instanceof HttpException) {
                 throw error;
             }
-            throw new GraphQLException(error.message, { extensions: error });
+            throw new InternalServerErrorException(error.message);
         }
     }
     
@@ -41,7 +41,7 @@ export class AuthorizationService {
     {
         try {
             const user = await this.userService.getUserByEmail(loginInput.email);
-            if (user) throw new GraphQLException("User already exists", null);
+            if (user) throw new BadRequestException("User already exists", null);
             
             const validatePasswords = await bcrypt.compare(loginInput.password, user.password);
             if (!validatePasswords) throw new GraphQLException("Passwords do not match", null);
@@ -49,10 +49,10 @@ export class AuthorizationService {
             const generatedToken = await this.tokenService.generateToken(user);
             return { user: user, token: generatedToken }
         } catch (error) {
-            if (error instanceof GraphQLException) {
+            if (error instanceof HttpException) {
                 throw error;
             }
-            throw new GraphQLException(error.message, { extensions: error });
+            throw new InternalServerErrorException(error.message);
         }
     }
     

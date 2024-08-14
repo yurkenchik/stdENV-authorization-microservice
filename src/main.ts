@@ -17,7 +17,10 @@ async function bootstrap(): Promise<void> {
     
     await app.listen()
         .then(() => console.log("Authorization microservice has successfully started!"))
-        .catch(error => console.error("Error starting authorization microservice: ", error));
+        .catch(error => {
+            console.error("Error starting authorization microservice: ", error);
+            setTimeout(bootstrap, 10000);
+        });
     
 }
 bootstrap();
