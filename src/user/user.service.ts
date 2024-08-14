@@ -1,6 +1,6 @@
-import {Injectable} from "@nestjs/common";
+import {BadRequestException, Injectable, NotFoundException} from "@nestjs/common";
 import {InjectRepository} from "@nestjs/typeorm";
-import {Repository} from "typeorm";
+import {InsertResult, Repository} from "typeorm";
 import {CreateUserInput} from "./inputs/create-user.input";
 import {GraphQLException} from "@nestjs/graphql/dist/exceptions";
 import {User} from "../entities/user.entity";
@@ -20,12 +20,15 @@ export class UserService {
                 .createQueryBuilder()
                 .insert()
                 .into(User)
-                .values(createUserInput)
+                .values({
+                    ...createUserInput
+                })
+                .returning('*')
                 .execute();
             
-            const user = userInsertResult.raw[0];
-            if (!user) throw new GraphQLException("Failed to create a user", { extensions: user })
-            
+            const userId = userInsertResult.identifiers[0].id;
+            const user = await this.getUserById(userId);
+            console.log("USER: ", user);
             return user;
         } catch (error) {
             if (error instanceof GraphQLException) {
@@ -62,9 +65,7 @@ export class UserService {
                 .where("email = :email", { email: userEmail })
                 .getOne();
             
-            if (!user) throw new GraphQLException("User not found", null)
-            
-            return user;
+            return user || null;
         } catch (error) {
             if (error instanceof GraphQLException) {
                 throw error;
