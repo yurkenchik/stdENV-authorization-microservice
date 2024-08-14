@@ -19,9 +19,9 @@ export class AuthorizationService {
     {
         try {
             const user = await this.userService.getUserByEmail(registrationInput.email);
-            if (user) throw new BadRequestException("User already exists", null);
+            if (user) throw new BadRequestException("User already exists");
             
-            const hashedPassword = await bcrypt.hash(user.password, 5);
+            const hashedPassword = await bcrypt.hash(registrationInput.password, 5);
             const createdUser = await this.userService.createUser({
                 ...registrationInput,
                 password: hashedPassword,
@@ -41,7 +41,7 @@ export class AuthorizationService {
     {
         try {
             const user = await this.userService.getUserByEmail(loginInput.email);
-            if (user) throw new BadRequestException("User already exists", null);
+            if (!user) throw new BadRequestException("User already exists", null);
             
             const validatePasswords = await bcrypt.compare(loginInput.password, user.password);
             if (!validatePasswords) throw new GraphQLException("Passwords do not match", null);

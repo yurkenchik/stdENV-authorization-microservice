@@ -1,4 +1,4 @@
-import {ClientProxy, MessagePattern, Payload} from "@nestjs/microservices";
+import {ClientProxy, EventPattern, MessagePattern, Payload} from "@nestjs/microservices";
 import {Controller, HttpException, Inject, InternalServerErrorException, Logger} from "@nestjs/common";
 import {AuthorizationService} from "./authorization.service";
 import {RegistrationInput} from "./inputs/registration.input";
@@ -17,18 +17,7 @@ export class AuthorizationMicroserviceController {
     @MessagePattern({ cmd: "registration" })
     async registration(@Payload() registrationInput: RegistrationInput): Promise<AuthenticationOutput>
     {
-        try {
-            console.log(registrationInput);
-            console.log("transport from registration message")
-            return this.authorizationService.registration(registrationInput);
-        } catch (error) {
-            if (error instanceof HttpException) {
-                this.logger.log(error.message);
-                throw error;
-            }
-            this.logger.log(error.message);
-            throw new InternalServerErrorException(error.message)
-        }
+        return this.authorizationService.registration(registrationInput);
     }
     
     @MessagePattern({ cmd: "login" })
@@ -36,6 +25,12 @@ export class AuthorizationMicroserviceController {
     {
         console.log(loginInput);
         return this.authorizationService.login(loginInput);
+    }
+    
+    @MessagePattern({ cmd: "getTestMessage" })
+    async getTestMessage(@Payload() data: string): Promise<string>
+    {
+        return data;
     }
     
 }
