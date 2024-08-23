@@ -1,7 +1,7 @@
-import {Injectable} from "@nestjs/common";
+import {HttpException, Injectable, InternalServerErrorException} from "@nestjs/common";
 import {GraphQLException} from "@nestjs/graphql/dist/exceptions";
 import {JwtService} from "@nestjs/jwt";
-import {User} from "../entities/user.entity";
+import {User} from "@studENV/shared/dist/entities/user.entity";
 
 @Injectable()
 export class TokenService {
@@ -23,10 +23,10 @@ export class TokenService {
             
             return this.jwtService.sign(tokenPayload);
         } catch (error) {
-            if (error instanceof GraphQLException) {
+            if (error instanceof HttpException) {
                 throw error;
             }
-            throw new GraphQLException(error.message, { extensions: error });
+            throw new InternalServerErrorException(error.message);
         }
         
     }

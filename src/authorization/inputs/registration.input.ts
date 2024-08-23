@@ -1,6 +1,6 @@
 import {Field, InputType} from "@nestjs/graphql";
 import {IsEmail, IsEnum, IsNotEmpty, IsString, Length} from "class-validator";
-import {RoleEnum} from "../../utils/role.enum";
+import {RoleEnum} from "@studENV/shared/dist/utils/role.enum";
 
 @InputType()
 export class RegistrationInput {
