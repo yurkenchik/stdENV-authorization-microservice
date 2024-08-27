@@ -1,14 +1,16 @@
-import {BadRequestException, HttpException, Inject, Injectable, InternalServerErrorException, Logger} from "@nestjs/common";
-import {RegistrationInput} from "./inputs/registration.input";
+import {BadRequestException, HttpException, Inject, Injectable, InternalServerErrorException, Logger, NotFoundException, UseFilters} from "@nestjs/common";
 import * as bcrypt from "bcrypt";
-import {LoginInput} from "./inputs/login.input";
 import {TokenService} from "../token/token.service";
-import {AuthenticationOutput} from "./outputs/authentication.output";
-import {ClientProxy} from "@nestjs/microservices";
-import {firstValueFrom} from "rxjs";
+import { ClientProxy } from "@nestjs/microservices";
+import { firstValueFrom } from "rxjs";
 import { DeleteResult } from "typeorm";
+import { RpcExceptionFilter } from "@studENV/shared/dist/filters/rcp-exception.filter";
+import { RegistrationInput } from "@studENV/shared/dist/inputs/authorization/registration.input"
+import { LoginInput } from "@studENV/shared/dist/inputs/authorization/login.input"
+import { AuthenticationOutput } from "@studENV/shared/dist/outputs/authoirization/authentication.output"
 
 @Injectable()
+@UseFilters(new RpcExceptionFilter())
 export class AuthorizationService {
 
     private readonly logger = new Logger(AuthorizationService.name);
@@ -26,6 +28,7 @@ export class AuthorizationService {
                 this.natsClient.send({ cmd: "getUserByEmail" }, registrationInput.email)
             );
             this.logger.log(JSON.stringify({ user }), AuthorizationService.name);
+
             if (user) throw new BadRequestException("User already exists");
             
             const hashedPassword = await bcrypt.hash(registrationInput.password, 5);
@@ -39,6 +42,7 @@ export class AuthorizationService {
             const generatedToken = await this.tokenService.generateToken(createdUser);
             return { user: createdUser, token: generatedToken };
         } catch (error) {
+            this.logger.log(`Caught error type: ${error.constructor.name}, message: ${error.message}`, error.stack);
             if (error instanceof HttpException) {
                 throw error;
             }
@@ -52,7 +56,7 @@ export class AuthorizationService {
             const user = await firstValueFrom(
                 this.natsClient.send({ cmd: "getUserByEmail" }, loginInput.email)
             );
-            if (!user) throw new BadRequestException("User already exists");
+            if (!user) throw new NotFoundException("User not found");
             
             const validatePasswords = await bcrypt.compare(loginInput.password, user.password);
             if (!validatePasswords) throw new BadRequestException("Passwords do not match");

@@ -1,9 +1,9 @@
-import {ClientProxy, EventPattern, MessagePattern, Payload} from "@nestjs/microservices";
+import {ClientProxy, EventPattern, MessagePattern, Payload, RpcException} from "@nestjs/microservices";
 import {Controller, HttpException, Inject, InternalServerErrorException, Logger, UseFilters} from "@nestjs/common";
 import {AuthorizationService} from "./authorization.service";
-import {RegistrationInput} from "./inputs/registration.input";
-import {LoginInput} from "./inputs/login.input";
-import {AuthenticationOutput} from "./outputs/authentication.output";
+import {RegistrationInput} from "@studENV/shared/dist/inputs/authorization/registration.input";
+import {LoginInput} from "@studENV/shared/dist/inputs/authorization/login.input";
+import {AuthenticationOutput} from "@studENV/shared/dist/outputs/authoirization/authentication.output";
 import { DeleteResult } from "typeorm";
 import { RpcExceptionFilter } from "@studENV/shared/dist/filters/rcp-exception.filter";
 
@@ -16,12 +16,13 @@ export class AuthorizationMicroserviceController {
     constructor(
         private readonly authorizationService: AuthorizationService,
     ) {}
-    
+
     @MessagePattern({ cmd: "registration" })
-    async registration(@Payload() registrationInput: RegistrationInput): Promise<AuthenticationOutput>
+    async registration(@Payload() registationInput): Promise<AuthenticationOutput>
     {
-        return await this.authorizationService.registration(registrationInput);
+        return this.authorizationService.registration(registationInput);
     }
+
     
     @MessagePattern({ cmd: "login" })
     async login(@Payload() loginInput: LoginInput): Promise<AuthenticationOutput>
