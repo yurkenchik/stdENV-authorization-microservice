@@ -1,20 +1,21 @@
-import {ClientProxy, EventPattern, MessagePattern, Payload, RpcException} from "@nestjs/microservices";
-import {Controller, HttpException, Inject, InternalServerErrorException, Logger, UseFilters} from "@nestjs/common";
+import {ClientProxy, EventPattern, MessagePattern, Payload} from "@nestjs/microservices";
+import {Controller, HttpException, Inject, Logger, UseFilters} from "@nestjs/common";
 import {AuthorizationService} from "./authorization.service";
-import {RegistrationInput} from "@studENV/shared/dist/inputs/authorization/registration.input";
 import {LoginInput} from "@studENV/shared/dist/inputs/authorization/login.input";
 import {AuthenticationOutput} from "@studENV/shared/dist/outputs/authoirization/authentication.output";
 import { DeleteResult } from "typeorm";
-import { RpcExceptionFilter } from "@studENV/shared/dist/filters/rcp-exception.filter";
+import {HttpService} from "@nestjs/axios";
 
 @Controller()
-@UseFilters(RpcExceptionFilter)
 export class AuthorizationMicroserviceController {
     
     private readonly logger = new Logger(AuthorizationMicroserviceController.name);
     
     constructor(
+        @Inject("NATS_SERVICE")
+        private readonly natsClient: ClientProxy,
         private readonly authorizationService: AuthorizationService,
+        private readonly httpService: HttpService
     ) {}
 
     @MessagePattern({ cmd: "registration" })
@@ -23,7 +24,6 @@ export class AuthorizationMicroserviceController {
         return this.authorizationService.registration(registationInput);
     }
 
-    
     @MessagePattern({ cmd: "login" })
     async login(@Payload() loginInput: LoginInput): Promise<AuthenticationOutput>
     {
@@ -36,11 +36,13 @@ export class AuthorizationMicroserviceController {
     {
         return await this.authorizationService.deleteAccount(userId);
     }
-    
-    @MessagePattern({ cmd: "getTestMessage" })
-    async getTestMessage(@Payload() data: string): Promise<string>
+
+    @EventPattern("error-topic")
+    async handleErrorException(@Payload() errorData: { statusCode: number, message: string })
     {
-        return data;
+        console.log("Exception error: ", errorData);
+        const { message, statusCode } = errorData;
+        throw new HttpException(message, statusCode);
     }
     
 }

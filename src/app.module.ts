@@ -3,11 +3,12 @@ import {TypeOrmModule} from "@nestjs/typeorm";
 import * as process from "node:process";
 import * as dotenv from "dotenv";
 import {JwtModule} from "@nestjs/jwt";
-
 import {AuthorizationModule} from "./authorization/authorization.module";
 import {ClientsModule, Transport} from "@nestjs/microservices";
 import {dataSourceOptions} from "@studENV/shared/dist/typeorm/typeorm.config";
 import {DataSourceOptions} from "typeorm";
+import { APP_FILTER } from '@nestjs/core';
+import { MSRpcExceptionFilter } from '@studENV/shared/dist/filters/rcp-exception.filter';
 dotenv.config();
 
 @Module({
@@ -28,7 +29,12 @@ dotenv.config();
       ]),
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+        provide: APP_FILTER,
+        useClass: MSRpcExceptionFilter
+    }
+  ],
   exports: [TypeOrmModule, JwtModule, ClientsModule]
 })
 export class AppModule {}
