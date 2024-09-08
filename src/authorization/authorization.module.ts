@@ -5,6 +5,8 @@ import {TokenModule} from "../token/token.module";
 import {ClientsModule} from "@nestjs/microservices";
 import {NatsClientModule} from "@studENV/shared/dist/nats-client/nats-client.module";
 import {HttpModule} from "@nestjs/axios";
+import {TypeOrmModule} from "@nestjs/typeorm";
+import {Role} from "@studENV/shared/dist/entities/role.entity"
 
 @Module({
     controllers: [AuthorizationMicroserviceController],
@@ -12,7 +14,8 @@ import {HttpModule} from "@nestjs/axios";
     imports: [
         TokenModule,
         NatsClientModule,
-        HttpModule
+        HttpModule,
+        TypeOrmModule.forFeature([Role])
     ],
     exports: [AuthorizationService]
 })
