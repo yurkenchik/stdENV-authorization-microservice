@@ -1,10 +1,11 @@
 import {ClientProxy, EventPattern, MessagePattern, Payload} from "@nestjs/microservices";
-import {Controller, HttpException, Inject, Logger, UseFilters} from "@nestjs/common";
+import {Controller, HttpException, Inject, Logger} from "@nestjs/common";
 import {AuthorizationService} from "./authorization.service";
 import {LoginInput} from "@studENV/shared/dist/inputs/authorization/login.input";
 import {AuthenticationOutput} from "@studENV/shared/dist/outputs/authoirization/authentication.output";
 import { DeleteResult } from "typeorm";
 import {HttpService} from "@nestjs/axios";
+import {RegistrationInput} from "@studENV/shared/dist/inputs/authorization/registration.input";
 
 @Controller()
 export class AuthorizationMicroserviceController {
@@ -19,9 +20,9 @@ export class AuthorizationMicroserviceController {
     ) {}
 
     @MessagePattern({ cmd: "registration" })
-    async registration(@Payload() registationInput): Promise<AuthenticationOutput>
+    async registration(@Payload() registrationInput: RegistrationInput): Promise<AuthenticationOutput>
     {
-        return this.authorizationService.registration(registationInput);
+        return this.authorizationService.registration(registrationInput);
     }
 
     @MessagePattern({ cmd: "login" })
