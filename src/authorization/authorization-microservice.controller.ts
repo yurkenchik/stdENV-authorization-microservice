@@ -6,6 +6,7 @@ import {AuthenticationOutput} from "@studENV/shared/dist/outputs/authoirization/
 import { DeleteResult } from "typeorm";
 import {HttpService} from "@nestjs/axios";
 import {RegistrationInput} from "@studENV/shared/dist/inputs/authorization/registration.input";
+import {User} from "@studENV/shared/dist/entities/user.entity";
 
 @Controller()
 export class AuthorizationMicroserviceController {
@@ -20,7 +21,7 @@ export class AuthorizationMicroserviceController {
     ) {}
 
     @MessagePattern({ cmd: "registration" })
-    async registration(@Payload() registrationInput: RegistrationInput): Promise<AuthenticationOutput>
+    async registration(@Payload() registrationInput: RegistrationInput): Promise<User>
     {
         return this.authorizationService.registration(registrationInput);
     }
@@ -44,6 +45,16 @@ export class AuthorizationMicroserviceController {
         console.log("Exception error: ", errorData);
         const { message, statusCode } = errorData;
         throw new HttpException(message, statusCode);
+    }
+
+    @MessagePattern({ cmd: "verifyUserAccountViaEmail" })
+    async verifyUserAccountViaEmail(@Payload() payload: {
+        email: string,
+        verificationCode: string
+    }): Promise<AuthenticationOutput>
+    {
+        const { email, verificationCode } = payload;
+        return await this.authorizationService.verifyUserAccountViaEmail(email, verificationCode);
     }
     
 }

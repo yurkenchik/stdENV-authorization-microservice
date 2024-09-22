@@ -34,7 +34,7 @@ export class AuthorizationService {
         private readonly tokenService: TokenService,
     ) {}
 
-    async registration(registrationInput: RegistrationInput): Promise<AuthenticationOutput>
+    async registration(registrationInput: RegistrationInput): Promise<User>
     {
         try {
             const user = await firstValueFrom(
@@ -66,11 +66,25 @@ export class AuthorizationService {
 
             console.log("NEWLY CREATED USER: ", createdUser);
 
+            const randomlyGeneratedVerificationCode = Math.floor(100000 + Math.random() * 900000);
+
             if (createdUser.role.role !== RoleEnum.TEACHER) {
                 await firstValueFrom(
                     this.natsClient.send({ cmd: "updateUser" }, {
                         userId: createdUser.id,
-                        updateUserInput: { status: UserStatusEnum.ACTIVE }
+                        updateUserInput: {
+                            status: UserStatusEnum.ACTIVE,
+                            verificationCode: randomlyGeneratedVerificationCode
+                        }
+                    })
+                )
+            } else {
+                await firstValueFrom(
+                    this.natsClient.send({ cmd: "updateUser" }, {
+                        userId: createdUser.id,
+                        updateUserInput: {
+                            verificationCode: randomlyGeneratedVerificationCode
+                        }
                     })
                 )
             }
@@ -81,8 +95,6 @@ export class AuthorizationService {
 
             console.log("UPDATED USER: ", createdUser);
 
-            const randomlyGeneratedVerificationCode = Math.floor(100000 + Math.random() * 900000);
-
             await firstValueFrom(
                 this.natsClient.send({ cmd: "sendVerificationCodeEmail" }, {
                     recipient: registrationInput.email,
@@ -90,8 +102,7 @@ export class AuthorizationService {
                 })
             );
 
-            const generatedToken = await this.tokenService.generateToken(createdUser);
-            return { user: registeredUser, token: generatedToken };
+            return user;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -127,6 +138,37 @@ export class AuthorizationService {
             return await firstValueFrom(
                 this.natsClient.send({  cmd: "deleteUser" }, userId)
             );
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    async verifyUserAccountViaEmail(email: string, verificationCode: string): Promise<AuthenticationOutput>
+    {
+        try {
+            const user: User = await firstValueFrom(
+                this.natsClient.send({ cmd: "getUserByEmail" }, email)
+            );
+
+            if (user.verificationCode !== verificationCode) {
+                throw new BadRequestException("Codes don't match");
+            }
+
+            const updatedUser: User = await firstValueFrom(
+                this.natsClient.send({ cmd: "updateUser" }, {
+                    userId: user.id,
+                    updateUserInput: {
+                        isAccountVerified: true,
+                        verificationCode: null
+                    }
+                })
+            )
+
+            const generatedToken = await this.tokenService.generateToken(user);
+            return { user: updatedUser, token: generatedToken };
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
