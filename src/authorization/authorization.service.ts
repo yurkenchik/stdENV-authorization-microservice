@@ -20,11 +20,11 @@ import {Role} from "@studENV/shared/dist/entities/role.entity"
 import {InjectRepository} from "@nestjs/typeorm";
 import {RoleEnum} from "@studENV/shared/dist/utils/role.enum";
 import {UserStatusEnum} from "@studENV/shared/dist/utils/user-status.enum";
+import {IAuthorizationRepository} from "./interfaces/authorization-repository.interface";
+import {AuthorizationMicroserviceController} from "./authorization-microservice.controller";
 
 @Injectable()
-export class AuthorizationService {
-
-    private readonly logger = new Logger(AuthorizationService.name);
+export class AuthorizationService implements IAuthorizationRepository {
 
     constructor(
         @InjectRepository(Role)
@@ -34,24 +34,15 @@ export class AuthorizationService {
         private readonly tokenService: TokenService,
     ) {}
 
-    async registration(registrationInput: RegistrationInput): Promise<User>
-    {
+    private readonly logger = new Logger(AuthorizationMicroserviceController.name);
+
+    async registration(registrationInput: RegistrationInput): Promise<User> {
         try {
-            const user = await firstValueFrom(
-                this.natsClient.send({ cmd: "getUserByEmail" }, registrationInput.email)
-            );
-            this.logger.log(JSON.stringify({ user }), AuthorizationService.name);
-
-            if (user) throw new BadRequestException("User already exists");
-
             const role = await this.roleRepository
                 .createQueryBuilder()
                 .where("role = :role", { role: registrationInput.role })
                 .getOne();
-
             if (!role) throw new NotFoundException("Role not found");
-
-            console.log("ROLE: ", role);
 
             const hashedPassword = await bcrypt.hash(registrationInput.password, 5);
             const createdUser: User = await firstValueFrom(
@@ -63,8 +54,6 @@ export class AuthorizationService {
                     role
                 })
             );
-
-            console.log("NEWLY CREATED USER: ", createdUser);
 
             const randomlyGeneratedVerificationCode = Math.floor(100000 + Math.random() * 900000);
 
@@ -91,9 +80,7 @@ export class AuthorizationService {
 
             const registeredUser = await firstValueFrom(
                 this.natsClient.send({ cmd: "getUserByEmail" }, createdUser.email)
-            )
-
-            console.log("UPDATED USER: ", createdUser);
+            );
 
             await firstValueFrom(
                 this.natsClient.send({ cmd: "sendVerificationCodeEmail" }, {
@@ -102,8 +89,9 @@ export class AuthorizationService {
                 })
             );
 
-            return user;
+            return registeredUser;
         } catch (error) {
+            this.logger.log(JSON.stringify({message: `Error: ${error.message}`}));
             if (error instanceof HttpException) {
                 throw error;
             }
@@ -111,19 +99,18 @@ export class AuthorizationService {
         }
     }
     
-    async login(loginInput: LoginInput): Promise<AuthenticationOutput>
-    {
+    async login(loginInput: LoginInput): Promise<AuthenticationOutput> {
         try {
             const user = await firstValueFrom(
                 this.natsClient.send({ cmd: "getUserByEmail" }, loginInput.email)
             );
             if (!user) throw new NotFoundException("User not found");
-            
+
             const validatePasswords = await bcrypt.compare(loginInput.password, user.password);
             if (!validatePasswords) throw new BadRequestException("Passwords do not match");
             
             const generatedToken = await this.tokenService.generateToken(user);
-            return { user: user, token: generatedToken }
+            return { user, token: generatedToken }
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -132,8 +119,7 @@ export class AuthorizationService {
         }
     }
 
-    async deleteAccount(userId: string): Promise<DeleteResult>
-    {
+    async deleteAccount(userId: string): Promise<DeleteResult> {
         try {
             return await firstValueFrom(
                 this.natsClient.send({  cmd: "deleteUser" }, userId)
@@ -146,8 +132,7 @@ export class AuthorizationService {
         }
     }
 
-    async verifyUserAccountViaEmail(email: string, verificationCode: string): Promise<AuthenticationOutput>
-    {
+    async verifyUserAccountViaEmail(email: string, verificationCode: string): Promise<AuthenticationOutput> {
         try {
             const user: User = await firstValueFrom(
                 this.natsClient.send({ cmd: "getUserByEmail" }, email)
